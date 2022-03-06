@@ -95,7 +95,7 @@ def get_label_for_continuous_subgraph(position_indicator, bedpe_list, continuous
     subgraph_size = len(position_indicator)
     label = np.zeros((subgraph_size, subgraph_size), dtype='bool')
     current_chrom = 'chr' + chrom_name
-    current_set = bedpe_list[current_chrom]
+    current_set = bedpe_list[current_chrom] if current_chrom in bedpe_list else {}
     edge_list_row = []
     edge_list_col = []
     if len(position_indicator) > continuous_len:
@@ -209,5 +209,5 @@ def hic_to_intra_txt(juicer_path, file_path, out_dir, chrom, norm='KR', resoluti
 if __name__ == '__main__':
     a = parsebed('bedpe/gm12878.tang.ctcf-chiapet.hg19.bedpe', valid_threshold=1)
     b = parsebed('bedpe/gm12878.tang.ctcf-chiapet.hg19.bedpe', valid_threshold=3)
-    print(len(a['chr1']))
+    print(a['chr1'])
     print(len(b['chr1']))
