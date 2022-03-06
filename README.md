@@ -17,3 +17,6 @@ GILoop is a deep learning model for detecting CTCF-mediated loops on Hi-C contac
 
 #### Usage:
 
+```
+conda create -n gil python=3.8
+```
