@@ -89,25 +89,20 @@ def get_start_tuples(segment_count, patch_size, resolution):
     return start_tuples
 
 
-if __name__ == '__main__':
+def run_sample_patches(
+        run_id, assembly, bedpe_path,
+        image_txt_dir, graph_txt_dir,
+        chroms
+):
+    dataset_path = os.path.join('dataset', run_id)
     RES = 10000
-    chrom_size_path = 'hg38.chrom.sizes'
-    cell_line_name = 'hela'
-    protein_name = 'ctcf'
-    graph_ratio = '100'
-    image_ratio = '100'
-    bedpe_list = parsebed('bedpe/hela.hg38.bedpe', valid_threshold=1)
-    image_txt_dir = 'txt_matrix/txt_{}_{}'.format(cell_line_name, image_ratio)
-    graph_txt_dir = 'txt_matrix/txt_{}_{}'.format(cell_line_name, graph_ratio)
-
-    dataset_name = '_'.join([cell_line_name, protein_name, graph_ratio, image_ratio])
-    dataset_path = os.path.join('dataset', dataset_name)
-    os.makedirs(dataset_path, exist_ok=True)
-
-    for cn in [str(i) for i in range(1, 18)] + [str(i) for i in range(19, 23)] + ['X']:
+    chrom_size_path = '{}.chrom.sizes'.format(assembly)
+    bedpe_list = parsebed(bedpe_path, valid_threshold=1)
+    os.makedirs(dataset_path, exist_ok=False)
+    for cn in chroms:
         image_set, graph_set, labels, indicators = \
             get_patches_different_downsampling_rate(
-                cn, 64, graph_txt_dir, image_txt_dir, 10000, chrom_size_path,
+                cn, 64, graph_txt_dir, image_txt_dir, RES, chrom_size_path,
                 bedpe_list
             )
         indicators.to_csv(os.path.join(dataset_path, 'indicators.{}.csv'.format(cn)))
@@ -119,6 +114,39 @@ if __name__ == '__main__':
         for idx in range(len(graph_set)):
             if indicators.iloc[idx * (2 * 64)]['locus'] == indicators.iloc[idx * (2 *64) + 64]['locus']:
                 graph_nodes_identical[idx] = True
-
-        print('Identical/all: {}/{}'.format(np.sum(graph_nodes_identical), len(graph_nodes_identical)))
         np.save(os.path.join(dataset_path, 'graph_identical.{}.npy'.format(cn)), graph_nodes_identical.astype('int'))
+
+
+# if __name__ == '__main__':
+#     RES = 10000
+#     chrom_size_path = 'hg38.chrom.sizes'
+#     cell_line_name = 'hela'
+#     protein_name = 'ctcf'
+#     graph_ratio = '100'
+#     image_ratio = '100'
+#     bedpe_list = parsebed('bedpe/hela.hg38.bedpe', valid_threshold=1)
+#     image_txt_dir = 'txt_matrix/txt_{}_{}'.format(cell_line_name, image_ratio)
+#     graph_txt_dir = 'txt_matrix/txt_{}_{}'.format(cell_line_name, graph_ratio)
+#
+#     dataset_name = '_'.join([cell_line_name, protein_name, graph_ratio, image_ratio])
+#     dataset_path = os.path.join('dataset', dataset_name)
+#     os.makedirs(dataset_path, exist_ok=True)
+#
+#     for cn in [str(i) for i in range(1, 18)] + [str(i) for i in range(19, 23)] + ['X']:
+#         image_set, graph_set, labels, indicators = \
+#             get_patches_different_downsampling_rate(
+#                 cn, 64, graph_txt_dir, image_txt_dir, 10000, chrom_size_path,
+#                 bedpe_list
+#             )
+#         indicators.to_csv(os.path.join(dataset_path, 'indicators.{}.csv'.format(cn)))
+#         np.save(os.path.join(dataset_path, 'imageset.{}.npy'.format(cn)), image_set.astype('float32'))
+#         np.save(os.path.join(dataset_path, 'graphset.{}.npy'.format(cn)), graph_set.astype('float32'))
+#         np.save(os.path.join(dataset_path, 'labels.{}.npy'.format(cn)), labels.astype('int'))
+#
+#         graph_nodes_identical = np.zeros((len(graph_set),), dtype='bool')
+#         for idx in range(len(graph_set)):
+#             if indicators.iloc[idx * (2 * 64)]['locus'] == indicators.iloc[idx * (2 *64) + 64]['locus']:
+#                 graph_nodes_identical[idx] = True
+#
+#         print('Identical/all: {}/{}'.format(np.sum(graph_nodes_identical), len(graph_nodes_identical)))
+#         np.save(os.path.join(dataset_path, 'graph_identical.{}.npy'.format(cn)), graph_nodes_identical.astype('int'))
