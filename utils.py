@@ -114,20 +114,13 @@ def read_data_with_motif(chrom_names, data_dir, patch_size):
         if node_features is None:
             node_features = np.zeros((total_cnt, 2 * patch_size, current_features.shape[2]), dtype='float32')
 
-        current_graph_identicals = np.load(os.path.join(data_dir, 'graph_identical.{}.npy'.format(cn)))
-        for j, identical in enumerate(current_graph_identicals):
-            if identical:
-                current_graph[j, :patch_size, patch_size:] = current_graph[j, :patch_size, :patch_size]
-                current_graph[j, patch_size:, :patch_size] = current_graph[j, :patch_size, :patch_size]
         current_end = current_start + len(current_image)
         imageset[current_start:current_end, :, :] = current_image
         graphset[current_start:current_end, :, :] = current_graph
         labels[current_start:current_end, :, :] = current_y
         node_features[current_start:current_end, :, :] = current_features
         current_start = current_end
-    for i, graph in enumerate(graphset):
-        graphset[i, :patch_size, :patch_size] = 0
-        graphset[i, patch_size:, patch_size:] = 0
+
     return np.log(imageset + 1), np.log(graphset + 1), labels.astype('int'), node_features
 
 
@@ -229,19 +222,12 @@ def read_graph_data(chrom_names, data_dir, patch_size):
         if node_features is None:
             node_features = np.zeros((total_cnt, 2 * patch_size, current_features.shape[2]), dtype='float32')
 
-        current_graph_identicals = np.load(os.path.join(data_dir, 'graph_identical.{}.npy'.format(cn)))
-        for j, identical in enumerate(current_graph_identicals):
-            if identical:
-                current_graph[j, :patch_size, patch_size:] = current_graph[j, :patch_size, :patch_size]
-                current_graph[j, patch_size:, :patch_size] = current_graph[j, :patch_size, :patch_size]
         current_end = current_start + len(current_graph)
         graphset[current_start:current_end, :, :] = current_graph
         labels[current_start:current_end, :, :] = current_y
         node_features[current_start:current_end, :, :] = current_features
         current_start = current_end
-    for i, graph in enumerate(graphset):
-        graphset[i, :patch_size, :patch_size] = 0
-        graphset[i, patch_size:, patch_size:] = 0
+
     return np.log(graphset + 1), labels.astype('int'), node_features
 
 

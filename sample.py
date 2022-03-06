@@ -43,6 +43,8 @@ def get_patches_different_downsampling_rate(chrom_name, patch_size, graph_txt_di
             graph = np.zeros((patch_size*2, patch_size*2))
             graph[:patch_size, :patch_size] = g
             graph[patch_size:, patch_size:] = g
+            graph[:patch_size, patch_size:] = g
+            graph[patch_size:, :patch_size] = g
             graph_set[i, :, :] = graph
             g, _, p = block_sampling(image_matrix, (tuple[0],), patch_size, bedpe_list)
             image_set[i, :, :] = g
@@ -58,45 +60,9 @@ def get_patches_different_downsampling_rate(chrom_name, patch_size, graph_txt_di
         assert len(p) == 2 * patch_size
         indicators.append(p)
     indicators = pd.concat(indicators)
-    assert len(indicators) == len(graph_set) * 2 * patch_size
-    return image_set, graph_set, labels, indicators
-
-
-def get_patches_from_chrom(chrom_name, patch_size, txt_dir, resolution, chrom_sizes_path, bedpe_list, save_memory=False, filter=True):
-    matrix = get_raw_graph(chrom_name, txt_dir, resolution, chrom_sizes_path, filter_by_nan=filter)
-    if filter:
-        segment_count = get_segment_count(len(matrix.get_cropped_headers()), patch_size)
-    else:
-        segment_count = get_segment_count(len(matrix.headers), patch_size)
-    start_tuples = get_start_tuples(segment_count, patch_size, resolution)
-    # random.shuffle(start_tuples)
-    if save_memory and len(start_tuples)>300:
-        start_tuples = start_tuples[:300]
-    image_set = np.zeros((len(start_tuples), patch_size, patch_size), dtype='float32')
-    graph_set = np.zeros((len(start_tuples), 2*patch_size, 2*patch_size), dtype='float32')
-    labels = np.zeros((len(start_tuples), patch_size, patch_size), dtype='bool')
-    indicators = []
-    print('Chromosome {}'.format(chrom_name))
-    for i, tuple in enumerate(start_tuples):
-        print('Sampling... {}/{}'.format(i+1, len(start_tuples)))
-        if tuple[0] == tuple[1]:
-            g, l, p = block_sampling(matrix, (tuple[0],), patch_size, bedpe_list, filter=filter)
-            graph = np.zeros((patch_size*2, patch_size*2))
-            graph[:patch_size, :patch_size] = g
-            graph[patch_size:, patch_size:] = g
-            graph_set[i, :, :] = graph
-            image_set[i, :, :] = g
-            labels[i, :, :] = l
-            p = gutils.autofill_indicators([p], patch_size)[0]
-            p = pd.concat([p, p])
-        else:
-            graph_set[i, :, :], l, p = block_sampling(matrix, tuple, patch_size, bedpe_list, filter=filter)
-            image_set[i, :, :] = graph_set[i, :patch_size, patch_size:]
-            labels[i, :, :] = l[:patch_size, patch_size:]
-            p = gutils.autofill_indicators([p], 2 * patch_size)[0]
-        assert len(p) == 2 * patch_size
-        indicators.append(p)
-    indicators = pd.concat(indicators)
+    for i, graph in enumerate(graph_set):
+        graph_set[i, :patch_size, :patch_size] = 0
+        graph_set[i, patch_size:, patch_size:] = 0
     assert len(indicators) == len(graph_set) * 2 * patch_size
     return image_set, graph_set, labels, indicators
 

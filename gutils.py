@@ -9,7 +9,6 @@ from hickit.reader import get_chrom_sizes, get_headers
 from hickit.matrix import CisMatrix
 
 
-
 def parsebed(chiafile, res=10000, lower=1, upper=5000000, valid_threshold=1):
     """
     Read the ChIA-PET bed file and generate a distionary of positive center points.
@@ -53,68 +52,6 @@ def autofill_indicators(indicators, full_size):
             padded_indicator = pd.concat([indicator, padder]).reset_index(drop=True)
             indicators[i] = padded_indicator
     return indicators
-
-
-# def dataset_sampling(chrom_names, subgraph_size, txt_dir, resolution, chrom_sizes_path,
-#                      continuous_len=100, continuous=True, save_memory=True,
-#                      bedpe_list=None):
-#     if bedpe_list is None:
-#         bedpe_list = parsebed('bedpe/gm12878.tang.ctcf-chiapet.hg19.bedpe', valid_threshold=1)
-#     original_header_ref_list = []
-#     dataset = None
-#     labels = None
-#     position_indicators = []
-#     for m_name in chrom_names:
-#         matrix = get_raw_graph(m_name, txt_dir, resolution, chrom_sizes_path)
-#         assert isinstance(matrix, CisMatrix)
-#         original_header_ref = matrix.headers.copy()
-#         original_header_ref['loci_existence'] = matrix.get_loci_existence_vector()
-#         original_header_ref_list.append(original_header_ref)
-#         assert matrix.mat.shape[0] == np.sum(original_header_ref['loci_existence'])
-#         subgraphs, subgraph_labels, subgraph_position_indicators = \
-#             generate_subgraphs(matrix, subgraph_size, continuous_len, continuous, save_memory, bedpe_list)
-#
-#         if dataset is None:
-#             dataset = subgraphs
-#             labels = subgraph_labels
-#         else:
-#             dataset = np.concatenate((dataset, subgraphs)).astype('float32')
-#             labels = np.concatenate((labels, subgraph_labels)).astype('bool')
-#         position_indicators.extend(subgraph_position_indicators)
-#     full_ref = pd.concat(original_header_ref_list)
-#     return dataset, labels, position_indicators, full_ref
-
-
-# def generate_subgraphs(cis_matrix: CisMatrix, subgraph_size, continuous_len, continuous, save_memory, bedpe_list):
-#     size = cis_matrix.mat.shape[0]
-#     subgraphs = []
-#     subgraph_labels = []
-#     position_indicators = []
-#
-#     if not continuous:
-#         for i in range(0, int(size / continuous_len) + 1):
-#             print('Sampling... {}/{}'.format(i+1, int(size / continuous_len) + 1))
-#             start = i * continuous_len
-#             end = (i + 1) * continuous_len
-#             if end > size:
-#                 end = size
-#             g, l, p = random_sampling(cis_matrix, start, end, subgraph_size, bedpe_list)
-#
-#             subgraphs.append(g)
-#             subgraph_labels.append(l)
-#             position_indicators.append(p)
-#     else:
-#         start_tuples = get_continuous_region_tuples(size, subgraph_size, continuous_len)
-#         if save_memory:
-#             if len(start_tuples) > 200:
-#                 start_tuples = random.sample(start_tuples, 200)
-#         for i, region in enumerate(start_tuples):
-#             print('Sampling... {}/{}'.format(i+1, int(len(start_tuples))))
-#             g, l, p = block_sampling(cis_matrix, region, continuous_len, bedpe_list)
-#             subgraphs.append(g)
-#             subgraph_labels.append(l)
-#             position_indicators.append(p)
-#     return np.asarray(subgraphs, dtype='float32'), np.asarray(subgraph_labels, dtype='bool'), position_indicators
 
 
 def block_sampling(matrix, starts_tuple, continuous_len, bedpe_list, filter=True):
@@ -197,49 +134,6 @@ def is_entry_valid_in_cropped_map(entry, position_indicator):
         return False
 
 
-# def get_label_for_continuous_subgraph_backup(cropped_headers, position_indicator, region_tuples, matrix, bedpe_list):
-#     subgraph_size = len(position_indicator)
-#     label = np.zeros((subgraph_size, subgraph_size), dtype='bool')
-#     current_chrom = 'chr' + pd.unique(matrix.headers['chrom'])[0]
-#     current_set = bedpe_list[current_chrom]
-#     edge_list_row = []
-#     edge_list_col = []
-#     for truth in current_set:
-#         for region in region_tuples:
-#             region_upper = cropped_headers.iloc[region[1] - 1]['locus'] + 1
-#             region_lower = cropped_headers.iloc[region[0]]['locus']
-#             if (truth[0] >= region_lower and
-#                     truth[0] < region_upper and
-#                     truth[1] >= region_lower and
-#                     truth[1] < region_upper):
-#                 if truth[0] in list(position_indicator['locus']) and truth[1] in list(position_indicator['locus']):
-#                     edge_list_row.append(list(position_indicator['locus']).index(truth[0]))
-#                     edge_list_col.append(list(position_indicator['locus']).index(truth[1]))
-#                 break
-#     label[edge_list_row, edge_list_col] = True
-#     label = np.triu(label) + np.tril(label.T, 1)
-#     return label.astype('bool')
-
-
-# def get_continuous_region_tuples(graph_size, subgraph_size, continuous_len):
-#     region_tuples = []
-#     assert subgraph_size % continuous_len == 0
-#     segment_cnt_in_subgraph = int(subgraph_size / continuous_len)
-#     segment_count = int(graph_size/continuous_len) + 1
-#     region_starts = [i*continuous_len for i in range(segment_count)]
-#     if len(region_starts) % segment_cnt_in_subgraph != 0:
-#         region_starts = region_starts[:-(len(region_starts)%segment_cnt_in_subgraph)]
-#     random.shuffle(region_starts)
-#     temp_starts = [
-#         region_starts[i:i+segment_cnt_in_subgraph] for i in range(0, len(region_starts), segment_cnt_in_subgraph)
-#     ]
-#     # print(temp_starts)
-#     for starts in temp_starts:
-#         if is_ascent_order(starts):
-#             region_tuples.append(starts)
-#     return region_tuples
-
-
 def is_ascent_order(the_list):
     the_max = None
     for item in the_list:
@@ -257,40 +151,6 @@ def padding(subgraph, label, subgraph_size):
     subgraph = np.pad(subgraph, [(0, padding_len), (0, padding_len)], mode='constant')
     label = np.pad(label, [(0, padding_len), (0, padding_len)], mode='constant')
     return subgraph, label
-
-
-# def random_sampling(matrix, start, end, target_size, bedpe_list):
-#     full_size = matrix.mat.shape[0]
-#     indices = list(range(start, end))
-#     other_indices = list(range(0, start)) + list(range(end, full_size))
-#     random_list = random.sample(other_indices, target_size - len(indices))
-#     sampled_indices = indices + random_list
-#     random.shuffle(sampled_indices)  # Not necessarily needed
-#     subgraph = matrix.mat[sampled_indices, :][:, sampled_indices]
-#     position_indicator = matrix.get_cropped_headers().copy().reset_index(drop=True)
-#     position_indicator = position_indicator.iloc[sampled_indices].reset_index(drop=True)
-#     label = get_label_for_subgraph(position_indicator, matrix, bedpe_list)
-#     return subgraph, label, position_indicator
-
-
-# def get_label_for_subgraph(position_indicator, matrix, bedpe_list):
-#     subgraph_size = len(position_indicator)
-#     label = np.zeros((subgraph_size, subgraph_size), dtype='bool')
-#     current_chrom = 'chr' + pd.unique(matrix.headers['chrom'])[0]
-#     current_dict = bedpe_list[current_chrom]
-#
-#     edge_list_row = []
-#     edge_list_col = []
-#     indicator_list = list(position_indicator.itertuples(index=False))
-#     for i in range(len(indicator_list)):
-#         for j in range(i, len(indicator_list)):
-#             if (indicator_list[i][1], indicator_list[j][1]) in current_dict or\
-#                     (indicator_list[j][1], indicator_list[i][1]) in current_dict:
-#                 edge_list_row.append(i)
-#                 edge_list_col.append(j)
-#     label[edge_list_row, edge_list_col] = True
-#     label = np.triu(label) + np.tril(label.T, 1)
-#     return label
 
 
 def get_raw_graph(chrom_name, txt_dir, resolution, chrom_sizes_path, filter_by_nan=True):
