@@ -18,9 +18,9 @@ from utils import IMAGE_SIZE, GRAPH_SIZE, get_split_graphset, scale_hic, normali
 from metrics import compute_auc
 
 
-def gnn_run(chroms, run_id, seed):
+def gnn_run(chroms, run_id, seed, dataset_name, epoch=50):
     # seed = hash(run_id)
-    dataset_dir = os.path.join('dataset', run_id)
+    dataset_dir = os.path.join('dataset', dataset_name)
 
     print('#' * 10 + ' Start training GCN ' + '#'*10)
 
@@ -153,7 +153,7 @@ def gnn_run(chroms, run_id, seed):
 
     history = GNN.fit(
         inputs, y=[flatten_train_y, flatten_train_y],
-        batch_size=bs, epochs=50,
+        batch_size=bs, epochs=epoch,
         validation_data=(val_x_tensors, [flatten_val_y, flatten_val_y]),
         callbacks=[
             tf.keras.callbacks.EarlyStopping(

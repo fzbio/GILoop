@@ -90,11 +90,11 @@ def get_start_tuples(segment_count, patch_size, resolution):
 
 
 def run_sample_patches(
-        run_id, assembly, bedpe_path,
+        dataset_name, assembly, bedpe_path,
         image_txt_dir, graph_txt_dir,
         chroms
 ):
-    dataset_path = os.path.join('dataset', run_id)
+    dataset_path = os.path.join('dataset', dataset_name)
     RES = 10000
     chrom_size_path = '{}.chrom.sizes'.format(assembly)
     bedpe_list = parsebed(bedpe_path, valid_threshold=1)

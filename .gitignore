@@ -128,3 +128,16 @@ dmypy.json
 # Pyre type checker
 .pyre/
 /tmp/
+/data/**
+!/data/.gitignore
+
+/dataset/**
+!/dataset/.gitignore
+
+/models/**
+!/models/.gitignore
+
+/predictions/**
+!/predictions/.gitignore
+
+

@@ -40,11 +40,11 @@ def get_chrom_motif_features(chrom_name, dataset_dir, gw_motif_df, graph_size):
     return features.reshape((-1, graph_size, features.shape[1]))
 
 
-def run_generate_node_features(run_id, chroms, assembly_name):
+def run_generate_node_features(dataset_name, chroms, assembly_name):
     print('='*10 + ' Start generating node features ' + '='*10)
-    dataset_path = os.path.join('dataset', run_id)
-    kmer_csv_path = os.path.join('dataset', 'kmer_{}.csv'.format(assembly_name))
-    motif_csv_path = os.path.join('dataset', 'fimo_{}.csv'.format(assembly_name))
+    dataset_path = os.path.join('dataset', dataset_name)
+    kmer_csv_path = os.path.join('data', 'kmer.{}.csv'.format(assembly_name))
+    motif_csv_path = os.path.join('data', 'fimo.{}.csv'.format(assembly_name))
     gw_kmer_df = pd.read_csv(kmer_csv_path, dtype={'chrom': 'str'}, sep=',', index_col=False)
     for cn in chroms:
         kmer_features = get_chrom_kmer_features(

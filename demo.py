@@ -8,8 +8,8 @@ if __name__ == '__main__':
     ##  Define the macros. Change the variables below according to what you need  ##
     ################################################################################
 
-
     # Define the unique ID for this run of experiment
+    # (i.e. the unique name of the model trained in this experiment)
     run_id = 'demo'
 
     # Random seed. Change this value if your model failed to converge
@@ -36,12 +36,16 @@ if __name__ == '__main__':
     # Specify the directory that contains the images and graphs of the source cell line
     # You can use a mixed downsampling rate, but here we use an identical sequencing depth
     # for both graph and image
-    source_image_data_dir = 'data/txt_gm12878_20'
-    source_graph_data_dir = 'data/txt_gm12878_20'
+    source_image_data_dir = 'data/txt_gm12878_50'
+    source_graph_data_dir = 'data/txt_gm12878_50'
 
     # Specify the data dir for target cell line
     target_image_data_dir = 'data/txt_hela_100'
     target_graph_data_dir = 'data/txt_hela_100'
+
+    # Name the sampled datasets with unique identifiers you like
+    source_dataset_name = 'gm12878_50'
+    target_dataset_name = 'hela_100'
 
     # Define the chromosomes we draw training data from
     source_chroms = [str(i) for i in range(1, 23)] + ['X']
@@ -57,28 +61,28 @@ if __name__ == '__main__':
 
     # Sample patches for source cell line
     run_sample_patches(
-        run_id,
+        source_dataset_name,
         source_assembly,
         source_bedpe_path,
         source_image_data_dir,
         source_graph_data_dir,
         source_chroms)
     # Generate the node features for source cell line
-    run_generate_node_features(run_id, source_chroms, source_assembly)
+    run_generate_node_features(source_dataset_name, source_chroms, source_assembly)
 
     # Sample patches for target cell line
     run_sample_patches(
-        run_id,
+        target_dataset_name,
         target_assembly,
         target_bedpe_path,
         target_image_data_dir,
         target_graph_data_dir,
         target_chroms)
     # Generate the node features for target cell line
-    run_generate_node_features(run_id, target_chroms, target_assembly)
+    run_generate_node_features(target_dataset_name, target_chroms, target_assembly)
 
     # Train
-    train_run(source_chroms, run_id, seed)
+    train_run(source_chroms, run_id, seed, source_dataset_name, epoch=1)
 
 
 

@@ -17,8 +17,8 @@ from utils import IMAGE_SIZE, get_split_imageset
 from metrics import compute_auc
 
 
-def cnn_run(chroms, run_id, seed):
-    dataset_dir = os.path.join('dataset', run_id)
+def cnn_run(chroms, run_id, seed, dataset_name, epoch=50):
+    dataset_dir = os.path.join('dataset', dataset_name)
     # seed = hash(run_id)
     print('#' * 10 + ' Start training U-Net ' + '#' * 10)
     train_images, train_y, val_images, val_y, test_images, test_y = \
@@ -141,7 +141,7 @@ def cnn_run(chroms, run_id, seed):
     inputs = [train_x_tensors[0]]
     history = CNN.fit(
         inputs, y=[flatten_train_y, flatten_train_y],
-        batch_size=bs, epochs=50,
+        batch_size=bs, epochs=epoch,
         validation_data=([val_x_tensors[0]], [flatten_val_y, flatten_val_y]),
         callbacks=[
             tf.keras.callbacks.EarlyStopping(

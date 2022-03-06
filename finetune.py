@@ -15,8 +15,8 @@ from utils import IMAGE_SIZE, scale_hic, normalise_graphs, get_split_dataset
 from metrics import compute_auc
 
 
-def finetune_run(chroms, run_id, seed):
-    dataset_dir = os.path.join('dataset', run_id)
+def finetune_run(chroms, run_id, seed, dataset_name, epoch=50):
+    dataset_dir = os.path.join('dataset', dataset_name)
     print('#' * 10 + ' Fine-tuning ' + '#' * 10)
     # seed = hash(run_id)
     train_images, train_graphs, train_features, train_y, val_images, val_graphs, val_features, val_y, test_images, \
@@ -117,7 +117,7 @@ def finetune_run(chroms, run_id, seed):
     inputs = train_x_tensors
     history = model.fit(
         inputs, y=[flatten_train_y, flatten_train_y],
-        batch_size=bs, epochs=50,
+        batch_size=bs, epochs=epoch,
         validation_data=(val_x_tensors, [flatten_val_y, flatten_val_y]),
         callbacks=[
             tf.keras.callbacks.EarlyStopping(
