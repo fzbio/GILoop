@@ -1,0 +1,158 @@
+import os.path
+
+import numpy as np
+import pandas as pd
+
+import gutils
+from gutils import get_raw_graph, block_sampling, parsebed
+import random
+
+
+def get_segment_count(cropped_header_length, patch_size):
+    if cropped_header_length % patch_size != 0:
+        return int(cropped_header_length / patch_size) + 1
+    else:
+        return int(cropped_header_length / patch_size)
+
+
+def get_patches_different_downsampling_rate(chrom_name, patch_size, graph_txt_dir, image_txt_dir, resolution,
+                                            chrom_sizes_path, bedpe_list):
+    image_matrix = get_raw_graph(chrom_name, image_txt_dir, resolution, chrom_sizes_path, filter_by_nan=False)
+    graph_matrix = get_raw_graph(chrom_name, graph_txt_dir, resolution, chrom_sizes_path, filter_by_nan=False)
+
+    graph_matrix.filter_by_nan_percentage(0.9999)
+    unified_cropped_headers = graph_matrix.get_cropped_headers()
+    unified_loci_existence = graph_matrix.get_loci_existence_vector()
+    image_matrix.mat = image_matrix.mat[unified_loci_existence, :][:, unified_loci_existence]
+    image_matrix._filtered = True
+    image_matrix._cropped_headers = unified_cropped_headers
+    image_matrix._loci_existence = unified_loci_existence
+
+    segment_count = get_segment_count(len(image_matrix.get_cropped_headers()), patch_size)
+    start_tuples = get_start_tuples(segment_count, patch_size, resolution)
+
+    image_set = np.zeros((len(start_tuples), patch_size, patch_size), dtype='float32')
+    graph_set = np.zeros((len(start_tuples), 2*patch_size, 2*patch_size), dtype='float32')
+    labels = np.zeros((len(start_tuples), patch_size, patch_size), dtype='bool')
+    indicators = []
+    print('Chromosome {}'.format(chrom_name))
+    for i, tuple in enumerate(start_tuples):
+        print('Sampling... {}/{}'.format(i+1, len(start_tuples)))
+        if tuple[0] == tuple[1]:
+            g, l, p = block_sampling(graph_matrix, (tuple[0],), patch_size, bedpe_list)
+            graph = np.zeros((patch_size*2, patch_size*2))
+            graph[:patch_size, :patch_size] = g
+            graph[patch_size:, patch_size:] = g
+            graph_set[i, :, :] = graph
+            g, _, p = block_sampling(image_matrix, (tuple[0],), patch_size, bedpe_list)
+            image_set[i, :, :] = g
+            labels[i, :, :] = l
+            p = gutils.autofill_indicators([p], patch_size)[0]
+            p = pd.concat([p, p])
+        else:
+            graph_set[i, :, :], l, p = block_sampling(graph_matrix, tuple, patch_size, bedpe_list)
+            g, _, p = block_sampling(image_matrix, tuple, patch_size, bedpe_list)
+            image_set[i, :, :] = g[:patch_size, patch_size:]
+            labels[i, :, :] = l[:patch_size, patch_size:]
+            p = gutils.autofill_indicators([p], 2 * patch_size)[0]
+        assert len(p) == 2 * patch_size
+        indicators.append(p)
+    indicators = pd.concat(indicators)
+    assert len(indicators) == len(graph_set) * 2 * patch_size
+    return image_set, graph_set, labels, indicators
+
+
+def get_patches_from_chrom(chrom_name, patch_size, txt_dir, resolution, chrom_sizes_path, bedpe_list, save_memory=False, filter=True):
+    matrix = get_raw_graph(chrom_name, txt_dir, resolution, chrom_sizes_path, filter_by_nan=filter)
+    if filter:
+        segment_count = get_segment_count(len(matrix.get_cropped_headers()), patch_size)
+    else:
+        segment_count = get_segment_count(len(matrix.headers), patch_size)
+    start_tuples = get_start_tuples(segment_count, patch_size, resolution)
+    # random.shuffle(start_tuples)
+    if save_memory and len(start_tuples)>300:
+        start_tuples = start_tuples[:300]
+    image_set = np.zeros((len(start_tuples), patch_size, patch_size), dtype='float32')
+    graph_set = np.zeros((len(start_tuples), 2*patch_size, 2*patch_size), dtype='float32')
+    labels = np.zeros((len(start_tuples), patch_size, patch_size), dtype='bool')
+    indicators = []
+    print('Chromosome {}'.format(chrom_name))
+    for i, tuple in enumerate(start_tuples):
+        print('Sampling... {}/{}'.format(i+1, len(start_tuples)))
+        if tuple[0] == tuple[1]:
+            g, l, p = block_sampling(matrix, (tuple[0],), patch_size, bedpe_list, filter=filter)
+            graph = np.zeros((patch_size*2, patch_size*2))
+            graph[:patch_size, :patch_size] = g
+            graph[patch_size:, patch_size:] = g
+            graph_set[i, :, :] = graph
+            image_set[i, :, :] = g
+            labels[i, :, :] = l
+            p = gutils.autofill_indicators([p], patch_size)[0]
+            p = pd.concat([p, p])
+        else:
+            graph_set[i, :, :], l, p = block_sampling(matrix, tuple, patch_size, bedpe_list, filter=filter)
+            image_set[i, :, :] = graph_set[i, :patch_size, patch_size:]
+            labels[i, :, :] = l[:patch_size, patch_size:]
+            p = gutils.autofill_indicators([p], 2 * patch_size)[0]
+        assert len(p) == 2 * patch_size
+        indicators.append(p)
+    indicators = pd.concat(indicators)
+    assert len(indicators) == len(graph_set) * 2 * patch_size
+    return image_set, graph_set, labels, indicators
+
+
+def get_boolean_graph_property(chrom_name, patch_size, txt_dir, resolution, chrom_sizes_path):
+    print('Chromosome {}'.format(chrom_name))
+    matrix = get_raw_graph(chrom_name, txt_dir, resolution, chrom_sizes_path)
+    segment_count = get_segment_count(len(matrix.get_cropped_headers()), patch_size)
+    # segment_count = int(len(matrix.get_cropped_headers())/patch_size) + 1
+    start_tuples = get_start_tuples(segment_count, patch_size, resolution)
+    graph_nodes_identical = np.zeros((len(start_tuples),))
+    for i, tup in enumerate(start_tuples):
+        if tup[0] == tup[1]:
+            graph_nodes_identical[i] = 1
+    return graph_nodes_identical
+
+
+def get_start_tuples(segment_count, patch_size, resolution):
+    start_tuples = []
+    for i in range(segment_count):
+        right_edge = min(segment_count, int(i+(2000000/resolution/patch_size))+2)
+        for j in range(i, right_edge):
+            start_tuples.append((i*patch_size, j*patch_size))
+    return start_tuples
+
+
+if __name__ == '__main__':
+    RES = 10000
+    chrom_size_path = 'hg38.chrom.sizes'
+    cell_line_name = 'hela'
+    protein_name = 'ctcf'
+    graph_ratio = '100'
+    image_ratio = '100'
+    bedpe_list = parsebed('bedpe/hela.hg38.bedpe', valid_threshold=1)
+    image_txt_dir = 'txt_matrix/txt_{}_{}'.format(cell_line_name, image_ratio)
+    graph_txt_dir = 'txt_matrix/txt_{}_{}'.format(cell_line_name, graph_ratio)
+
+    dataset_name = '_'.join([cell_line_name, protein_name, graph_ratio, image_ratio])
+    dataset_path = os.path.join('dataset', dataset_name)
+    os.makedirs(dataset_path, exist_ok=True)
+
+    for cn in [str(i) for i in range(1, 18)] + [str(i) for i in range(19, 23)] + ['X']:
+        image_set, graph_set, labels, indicators = \
+            get_patches_different_downsampling_rate(
+                cn, 64, graph_txt_dir, image_txt_dir, 10000, chrom_size_path,
+                bedpe_list
+            )
+        indicators.to_csv(os.path.join(dataset_path, 'indicators.{}.csv'.format(cn)))
+        np.save(os.path.join(dataset_path, 'imageset.{}.npy'.format(cn)), image_set.astype('float32'))
+        np.save(os.path.join(dataset_path, 'graphset.{}.npy'.format(cn)), graph_set.astype('float32'))
+        np.save(os.path.join(dataset_path, 'labels.{}.npy'.format(cn)), labels.astype('int'))
+
+        graph_nodes_identical = np.zeros((len(graph_set),), dtype='bool')
+        for idx in range(len(graph_set)):
+            if indicators.iloc[idx * (2 * 64)]['locus'] == indicators.iloc[idx * (2 *64) + 64]['locus']:
+                graph_nodes_identical[idx] = True
+
+        print('Identical/all: {}/{}'.format(np.sum(graph_nodes_identical), len(graph_nodes_identical)))
+        np.save(os.path.join(dataset_path, 'graph_identical.{}.npy'.format(cn)), graph_nodes_identical.astype('int'))
