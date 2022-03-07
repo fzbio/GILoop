@@ -140,4 +140,5 @@ dmypy.json
 /predictions/**
 !/predictions/.gitignore
 
-
+/tmp/**
+!/tmp/.gitignore
