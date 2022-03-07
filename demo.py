@@ -26,7 +26,7 @@ if __name__ == '__main__':
     # In the real-world scenarios, the target cell line typically does not have ChIA-PET labels
     # In that case, please specify an empty target .bedpe file as a placeholder
     # Comment or uncomment the following two lines as needed
-    target_bedpe_path = 'bedpe/HeLa_CTCF_PET_clusters.txt'
+    target_bedpe_path = 'bedpe/hela.hg38.bedpe'
     # target_bedpe_path = 'bedpe/placeholder.bedpe'  # Uncomment this in the case where target label is unavailable
 
     mode = 'test'
