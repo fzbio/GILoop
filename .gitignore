@@ -127,7 +127,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-/tmp/
+#/tmp/
 /data/**
 !/data/.gitignore
 
