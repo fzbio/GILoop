@@ -89,11 +89,12 @@ if __name__ == '__main__':
     run_generate_node_features(target_dataset_name, target_chroms, target_assembly)
 
     # Train
-    train_run(source_chroms, run_id, seed, source_dataset_name, epoch=1)
+    train_run(source_chroms, run_id, seed, source_dataset_name, epoch=50)
 
     # Predict on the target cell line
     run_output_predictions(
         run_id,
+        'Finetune',
         threshold,
         target_dataset_name,
         target_assembly,
