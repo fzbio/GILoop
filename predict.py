@@ -31,6 +31,8 @@ def run_output_predictions(run_id, threshold, target_dataset_name, target_assemb
     with open(extra_config_path) as fp:
         saved_upper_bound = json.load(fp)['graph_upper_bound']
     pred_dfs = []
+    ys = []
+    y_preds = []
     for chrom in chroms:
         model = tf.keras.models.load_model(model_path)
         indicator_path = os.path.join(dataset_dir, 'indicators.{}.csv'.format(chrom))
@@ -38,8 +40,8 @@ def run_output_predictions(run_id, threshold, target_dataset_name, target_assemb
         images, graphs, y, features = read_data_with_motif([chrom], dataset_dir, IMAGE_SIZE)
         graphs = normalise_graphs(scale_hic(graphs, saved_upper_bound))
         test_y_pred = np.asarray(model.predict([images, features, graphs])[1])
-        if mode == 'test':
-            print('Chromosome {} AP is {}'.format(chrom, average_precision_score(y.flatten(), test_y_pred.flatten())))
+        ys.append(y.flatten())
+        y_preds.append(test_y_pred.flatten())
         chrom_proba, chrom_gt = get_chrom_proba(
             chrom,
             get_chrom_sizes(chrom_size_path),
@@ -58,6 +60,10 @@ def run_output_predictions(run_id, threshold, target_dataset_name, target_assemb
         del model
         gc.collect()
         tf.keras.backend.clear_session()
+    if mode == 'test':
+        print('PRAUC on the target cell line is {}'.format(
+            average_precision_score(np.concatenate(ys), np.concatenate(y_preds))
+        ))
     full_pred_df = pd.concat(pred_dfs)
     full_pred_df.to_csv(output_path, sep='\t', index=False, header=False)
     return full_pred_df

@@ -4,7 +4,7 @@ from utils import get_split_graphset, get_split_dataset
 
 
 if __name__ == '__main__':
-    index = 6
+    index = 2
     train_graphs, train_features, train_y, val_graphs, val_features, val_y, test_graphs, test_features, test_y = \
         get_split_graphset('dataset/hela_100', 64, 1024, ['1'])
 
