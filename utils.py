@@ -19,6 +19,27 @@ def get_best_threshold(y_score, y_true, thresholds):
             best_thresh = thresh
     return best_thresh
 
+
+def get_chrom_pred_df(chrom_name, chrom_proba, threshold, the_headers, resolution=10000):
+    assert chrom_proba.shape[0] == len(the_headers)
+    chrom_name = 'chr' + chrom_name
+    chrom_binary_pred = (chrom_proba > threshold)
+    pos_coords = np.argwhere(chrom_binary_pred)
+    locus1_start = pos_coords[:, 0] * resolution
+    locus1_end = (pos_coords[:, 0] + 1) * resolution
+    locus2_start = pos_coords[:, 1] * resolution
+    locus2_end = (pos_coords[:, 1] + 1) * resolution
+    the_dict = OrderedDict()
+    the_dict['chrom1'] = chrom_name
+    the_dict['locus1_start'] = locus1_start
+    the_dict['locus1_end'] = locus1_end
+    the_dict['chrom2'] = chrom_name
+    the_dict['locus2_start'] = locus2_start
+    the_dict['locus2_end'] = locus2_end
+    df = pd.DataFrame(the_dict)
+    return df
+
+
 def output_chrom_pred_to_bedpe(chrom_name, chrom_proba, threshold, full_headers, output_dir, resolution):
     assert chrom_proba.shape[0] == len(full_headers)
     chrom_name = 'chr' + chrom_name

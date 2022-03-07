@@ -1,6 +1,7 @@
 from sample_patches import run_sample_patches
 from generate_node_features import run_generate_node_features
 from train import train_run
+from predict import run_output_predictions
 
 
 if __name__ == '__main__':
@@ -54,6 +55,12 @@ if __name__ == '__main__':
         [str(i) for i in range(1, 18)] + \
         [str(i) for i in range(19, 23)] + ['X'] # Chr18 of HeLa-S3 is absent in the Hi-C file
 
+    # Set the threshold cutting off the probability map to generate the final annotations
+    threshold = 0.48
+
+    # Set the path to the output file, where saves the annotations
+    output_path = 'predictions/demo.bedpe'
+
 
     ##############################################################################
     ###               The GILoop core algorithm starts from here               ###
@@ -83,6 +90,17 @@ if __name__ == '__main__':
 
     # Train
     train_run(source_chroms, run_id, seed, source_dataset_name, epoch=1)
+
+    # Predict on the target cell line
+    run_output_predictions(
+        run_id,
+        threshold,
+        target_dataset_name,
+        target_assembly,
+        target_chroms,
+        output_path,
+        mode
+    )
 
 
 
