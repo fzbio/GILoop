@@ -4,8 +4,13 @@ import random
 from collections import OrderedDict
 import pandas as pd
 from sklearn.metrics import f1_score
+import cooler
 GRAPH_SIZE = 128
 IMAGE_SIZE = 64
+
+
+def cool2txt(cooler_path):
+    pass
 
 
 def get_best_threshold(y_score, y_true, thresholds):
