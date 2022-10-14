@@ -7,16 +7,6 @@ GILoop is a deep learning model for detecting CTCF-mediated loops on Hi-C contac
 
 
 
-#### Requirements:
-
-​	*NumPy==1.19.5*
-
-​	*pandas==1.3.1*
-
-​	*TensorFlow==2.7.0*
-
-​	*TensorFlow-addons==0.15.0*
-
 
 
 #### Installation:
