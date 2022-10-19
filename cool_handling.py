@@ -72,13 +72,13 @@ def align_sequencing_depth(source_cool, target_cool, source_cis_reads, target_ci
         rate = target_cis_reads / source_cis_reads
         downsample(source_cool, rate, source_out, source_chroms)
         copyfile(target_cool.filename, target_out)
-        return cooler.Cooler(source_out), target_cool, int(source_cis_reads*rate), target_cis_reads
+        return cooler.Cooler(source_out), cooler.Cooler(target_out), int(source_cis_reads*rate), target_cis_reads
     else:
         print('Downsampling target Hi-C to comparable sequencing depth as the source cell line...')
         rate = source_cis_reads / target_cis_reads
         downsample(target_cool, rate, target_out, target_chroms)
         copyfile(source_cool.filename, source_out)
-        return source_cool, cooler.Cooler(target_out), source_cis_reads, int(target_cis_reads*rate)
+        return cooler.Cooler(source_out), cooler.Cooler(target_out), source_cis_reads, int(target_cis_reads*rate)
 
 
 def GCN_downsampling(clr, out_file, cis_reads, is_source, chroms, optimal_depth=265000000):
