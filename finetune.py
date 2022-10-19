@@ -15,6 +15,20 @@ from utils import IMAGE_SIZE, scale_hic, normalise_graphs, get_split_dataset
 from metrics import compute_auc
 
 
+def ds_generator(images, features, graphs, flatten_y):
+    """
+    Returns tuple of (inputs,outputs) where
+    inputs  = (inp1,inp2,inp2)
+    outputs = (out1,out2)
+    """
+    def g():
+        for i in range(len(images)):
+            inputs = (images[i], features[i], graphs[i])
+            outputs = (flatten_y[i], flatten_y[i])
+            yield inputs, outputs
+    return g
+
+
 def finetune_run(chroms, run_id, seed, dataset_name, epoch=50):
     dataset_dir = os.path.join('dataset', dataset_name)
     print('#' * 10 + ' Fine-tuning ' + '#' * 10)
@@ -47,24 +61,51 @@ def finetune_run(chroms, run_id, seed, dataset_name, epoch=50):
     ]
     complete_learning_rate = 0.0001
 
+    bs = 8
+    if len(train_images) % bs == 0:
+        steps_per_epoch = int(len(train_images) / bs)
+    else:
+        steps_per_epoch = int(len(train_images) / bs) + 1
+
+
     # Data preparation (convert to tensors)
 
-    train_images_tensor = tf.convert_to_tensor(train_images, dtype=tf.float32)
-    train_features_tensor = tf.convert_to_tensor(train_features, dtype=tf.float32)
-    train_graphs_tensor = tf.convert_to_tensor(train_graphs, dtype=tf.float32)
-
-    val_images_tensor = tf.convert_to_tensor(val_images, dtype=tf.float32)
-    val_features_tensor = tf.convert_to_tensor(val_features, dtype=tf.float32)
-    val_graphs_tensor = tf.convert_to_tensor(val_graphs, dtype=tf.float32)
-
-    train_x_tensors = [train_images_tensor, train_features_tensor, train_graphs_tensor]
-    val_x_tensors = [val_images_tensor, val_features_tensor, val_graphs_tensor]
+    # train_images_tensor = tf.convert_to_tensor(train_images, dtype=tf.float32)
+    # train_features_tensor = tf.convert_to_tensor(train_features, dtype=tf.float32)
+    # train_graphs_tensor = tf.convert_to_tensor(train_graphs, dtype=tf.float32)
+    #
+    # val_images_tensor = tf.convert_to_tensor(val_images, dtype=tf.float32)
+    # val_features_tensor = tf.convert_to_tensor(val_features, dtype=tf.float32)
+    # val_graphs_tensor = tf.convert_to_tensor(val_graphs, dtype=tf.float32)
+    #
+    # train_x_tensors = [train_images_tensor, train_features_tensor, train_graphs_tensor]
+    # val_x_tensors = [val_images_tensor, val_features_tensor, val_graphs_tensor]
 
     flatten_train_y = train_y.reshape((-1, IMAGE_SIZE * IMAGE_SIZE))[..., np.newaxis]
     flatten_val_y = val_y.reshape((-1, IMAGE_SIZE * IMAGE_SIZE))[..., np.newaxis]
 
+    train_ds = tf.data.Dataset.from_generator(
+        ds_generator(train_images, train_features, train_graphs, flatten_train_y),
+        output_signature=
+        (
+            (
+                tf.TensorSpec(shape=train_images.shape[1:], dtype=tf.float32),
+                tf.TensorSpec(shape=train_features.shape[1:], dtype=tf.float32),
+                tf.TensorSpec(shape=train_graphs.shape[1:], dtype=tf.float32)
+            ),
+            (
+                tf.TensorSpec(shape=flatten_train_y.shape[1:], dtype=tf.int64),
+                tf.TensorSpec(shape=flatten_train_y.shape[1:], dtype=tf.int64)
+            )
+        )
+    )
+    train_ds = train_ds.batch(bs).repeat(epoch).prefetch(tf.data.AUTOTUNE)
+
+    val_x_ds = tf.data.Dataset.from_tensor_slices((val_images, val_features, val_graphs))
+    val_y_ds = tf.data.Dataset.from_tensor_slices((flatten_val_y, flatten_val_y))
+    val_ds = tf.data.Dataset.zip((val_x_ds, val_y_ds)).batch(bs)
+
     # Batch size setup
-    bs = 8
 
     GNN = tf.keras.models.load_model(
         'models/{}_GNN'.format(run_id)
@@ -114,11 +155,12 @@ def finetune_run(chroms, run_id, seed, dataset_name, epoch=50):
         }
     )
 
-    inputs = train_x_tensors
+    inputs = train_ds
     history = model.fit(
-        inputs, y=[flatten_train_y, flatten_train_y],
-        batch_size=bs, epochs=epoch,
-        validation_data=(val_x_tensors, [flatten_val_y, flatten_val_y]),
+        inputs,
+        epochs=epoch,
+        validation_data=val_ds,
+        steps_per_epoch=steps_per_epoch,
         callbacks=[
             tf.keras.callbacks.EarlyStopping(
                 monitor='val_sigmoid_flattened_' + 'PR_AUC',  # use validation AUC of precision-recall for stopping
@@ -128,8 +170,8 @@ def finetune_run(chroms, run_id, seed, dataset_name, epoch=50):
         verbose=2
     )
 
-    train_y_pred = np.asarray(model.predict(train_x_tensors)[1])
-    val_y_pred = np.asarray(model.predict(val_x_tensors)[1])
+    train_y_pred = np.asarray(model.predict(train_ds, steps=steps_per_epoch)[1])
+    val_y_pred = np.asarray(model.predict(val_ds)[1])
     test_y_pred = np.asarray(model.predict([test_images, test_features, test_graphs])[1])
 
     train_auc, train_ap = compute_auc(train_y_pred, train_y.astype('bool'))
