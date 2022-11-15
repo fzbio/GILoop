@@ -145,3 +145,4 @@ dmypy.json
 /test.py
 /log.err
 /log.out
+/target_test.py

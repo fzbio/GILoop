@@ -84,7 +84,8 @@ def align_sequencing_depth(source_cool, target_cool, source_cis_reads, target_ci
 def GCN_downsampling(clr, out_file, cis_reads, is_source, chroms, optimal_depth=265000000):
     if cis_reads < optimal_depth:
         print('Cis-reads fewer than the optimal coverage for GCN. Using lazy mode instead.')
-        return clr
+        copyfile(clr.filename, out_file)
+        return cooler.Cooler(out_file)
     else:
         cell_line = 'Source' if is_source else 'Target'
         print('Downsampling {} cell line for GCN experimental optimum.'.format(cell_line))
